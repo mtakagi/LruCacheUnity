@@ -3,74 +3,72 @@
 // https://android.googlesource.com/platform/frameworks/support.git/+/795b97d901e1793dac5c3e67d43c96a758fec388/v4/java/android/support/v4/util/LruCache.java
 // https://developer.android.com/reference/android/util/LruCache.html
 public class LruCache<TKey, TValue> {
-	private int size;
-	private int maxSize;
-	private int putCount;
-	private int createCount;
-	private int evictionCount;
-	private int hitCount;
-	private int missCount;
+	private readonly OrderedDictionary<TKey, TValue> _map;
 
-	private OrderedDictionary<TKey, TValue> map;
-
-	public int Size { get { return size; } }
-	public int MaxSize { get { return maxSize; } }
-	public int PutCount { get { return putCount; } }
-	public int CreateCount { get { return createCount; } }
-	public int EvictionCount { get { return evictionCount; } }
-	public int HitCount { get { return hitCount; } }
-	public int MissCount { get { return missCount; } }
-	public IDictionary<TKey, TValue> Snapshot { get { return new Dictionary<TKey, TValue> (this.map); } }
+	public int Size { get; private set; }
+	public int MaxSize { get; private set; }
+	public int PutCount { get; private set; }
+	public int CreateCount { get; private set; }
+	public int EvictionCount { get; private set; }
+	public int HitCount { get; private set; }
+	public int MissCount { get; private set; }
+	public IDictionary<TKey, TValue> Snapshot { get { return new Dictionary<TKey, TValue> (_map); } }
 
 	public LruCache(int maxSize) {
-		this.maxSize = maxSize;
-		this.map = new OrderedDictionary<TKey, TValue>(true);
+		MaxSize = maxSize;
+		_map = new OrderedDictionary<TKey, TValue>(true);
 	}
 
 	public TValue Get(TKey key) {
 		TValue value;
 
-		if (this.map.TryGetValue (key, out value)) {
-			hitCount++;
+		if (_map.TryGetValue (key, out value)) {
+			HitCount++;
 			return value;
 		}
 			
-		missCount++;
+		MissCount++;
 		value = Create (key);
 
-		if (value != null) {
-			createCount++;
-			this.size += SafeSizeOf (key, value);
-			this.map [key] = value;
-			TrimToSize (this.maxSize);
+		if (value == null)
+		{
+			return default(TValue);
 		}
+		
+		CreateCount++;
+		Size += SafeSizeOf (key, value);
+		_map [key] = value;
+		TrimToSize (MaxSize);
 
 		return value;
 	}
 
 	public TValue Put(TKey key, TValue value)
 	{
-		putCount++;
-		size += SafeSizeOf (key, value);
+		PutCount++;
+		Size += SafeSizeOf (key, value);
 
 		TValue previous;
-		if (this.map.TryGetValue (key, out previous)) {
-			size -= SafeSizeOf (key, previous);
+		if (_map.TryGetValue (key, out previous)) {
+			Size -= SafeSizeOf (key, previous);
 		}
-		this.map [key] = value;
-		TrimToSize (maxSize);
+		_map [key] = value;
+		TrimToSize (MaxSize);
 
 		return previous;
 	}
 
 	public TValue Remove(TKey key)
 	{
-		var previous = this.map [key];
+		var previous = _map [key];
 
-		if (previous != null) {
-			this.map.Remove (key);
-			size -= SafeSizeOf (key, previous);
+		if (previous == null)
+		{
+			return default(TValue);
 		}
+		
+		_map.Remove (key);
+		Size -= SafeSizeOf (key, previous);
 
 		return previous;	
 	}
@@ -82,28 +80,29 @@ public class LruCache<TKey, TValue> {
 
 	public override string ToString ()
 	{
-		var accesses = hitCount + missCount;
-		var hitPercent = accesses != 0 ? (100 * hitCount / accesses) : 0;
+		var accesses = HitCount + MissCount;
+		var hitPercent = accesses != 0 ? (100 * HitCount / accesses) : 0;
 
-		return string.Format ("LruCache[maxSize={0},hits={1},misses={2},hitRate={3}]", maxSize, hitCount, missCount, hitPercent);
+		return string.Format ("LruCache[maxSize={0},hits={1},misses={2},hitRate={3}]", MaxSize, HitCount, MissCount, hitPercent);
 	}
 
 	private void TrimToSize(int maxSize)
 	{
-		var enumerator = this.map.GetEnumerator ();
+		using (var enumerator = _map.GetEnumerator())
+		{
+			while (Size > maxSize && _map.Count > 0) {
+				if (!enumerator.MoveNext ()) {
+					break;
+				}
 
-		while (size > maxSize && this.map.Count > 0) {
-			if (!enumerator.MoveNext ()) {
-				break;
-			}
+				var key = enumerator.Current.Key;
+				var value = enumerator.Current.Value;
+				_map.Remove (key);
+				Size -= SafeSizeOf (key, value);
+				EvictionCount++;
 
-			var key = enumerator.Current.Key;
-			var value = enumerator.Current.Value;
-			this.map.Remove (key);
-			size -= SafeSizeOf (key, value);
-			evictionCount++;
-
-			EntryEvicted (key, value);
+				EntryEvicted (key, value);
+			}			
 		}
 	}
 
