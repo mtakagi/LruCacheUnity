@@ -9,8 +9,9 @@ echo "Run Unity Test Runner"
 
 ${UNITY_PATH} \
 	-runEditorTests \
-	-projectPath ${pwd} \
-	-logFile ${pwd}/testrunner.log \
+	-projectPath $(pwd) \
+	-editorTestsResultFile $(pwd)/testrunner.xml \
+	-logFile $(pwd)/testrunner.log \
 	-editorTestsVerboseLog \
 	-batchmode \
 	-nographics \
