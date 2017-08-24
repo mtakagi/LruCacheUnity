@@ -1,5 +1,4 @@
-﻿using System.Security.AccessControl;
-using NUnit.Framework;
+﻿using NUnit.Framework;
 
 namespace Editor
 {
