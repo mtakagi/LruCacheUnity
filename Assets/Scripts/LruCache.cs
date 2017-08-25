@@ -14,6 +14,12 @@ public class LruCache<TKey, TValue> {
 	public int MissCount { get; private set; }
 	public IDictionary<TKey, TValue> Snapshot { get { return new Dictionary<TKey, TValue> (_map); } }
 
+	public TValue this[TKey key]
+	{
+		get { return _map[key]; }
+		set { _map[key] = value; }
+	}
+	
 	public LruCache(int maxSize) {
 		MaxSize = maxSize;
 		_map = new OrderedDictionary<TKey, TValue>(true);

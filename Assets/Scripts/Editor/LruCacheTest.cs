@@ -16,6 +16,7 @@ namespace Editor
         
         private LruCache<string, string> _cache;
         private LruCache<string, string> _customCache;
+        private LruCache<string, string> _emptyCache = new LruCache<string, string>(1);
     
         [SetUp]
         public void Init()
@@ -54,6 +55,22 @@ namespace Editor
             Assert.Null(sample);
             sample = _customCache.Get("Sample3");
             Assert.NotNull(sample);
+        }
+        
+        [Test]
+        public void ExceptionTest()
+        {
+            Assert.Throws<System.ArgumentNullException>(() =>
+            {
+                // ReSharper disable once UnusedVariable
+                var tmp = _emptyCache[null];
+            });
+            Assert.Throws<System.ArgumentNullException>(() => { _emptyCache[null] = "hoge"; });
+            Assert.Throws<System.Collections.Generic.KeyNotFoundException>(() =>
+            {
+                // ReSharper disable once UnusedVariable
+                var tmp = _emptyCache["null"];
+            });
         }
     }
 }
